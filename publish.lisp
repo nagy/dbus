@@ -115,10 +115,11 @@
 (defun full-member-name (interface member)
   (concatenate 'string interface "." member))
 
-(defun stringify-lisp-name (lisp-name)
-  "Return a string that is the capitalized symbol name of LISP-NAME,
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun stringify-lisp-name (lisp-name)
+    "Return a string that is the capitalized symbol name of LISP-NAME,
 sans dashes."
-  (remove #\- (string-capitalize lisp-name)))
+    (remove #\- (string-capitalize lisp-name))))
 
 (defclass method-handler (handler)
   ((output-signature :initarg :output-signature :reader handler-output-signature)))
