@@ -126,6 +126,7 @@ sans dashes."
   (check-type method-name symbol)
   (check-type name-string string)
   (check-type interface string)
+  (assert (not (find #\- interface)))
   (multiple-value-bind (object object-name)
       (require-dbus-object object-name)
     (setf (gethash (full-member-name interface name-string)
