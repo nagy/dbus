@@ -78,6 +78,20 @@
              (shiftf name object (find-dbus-object object)))
         finally (return (values object (dbus-object-name object)))))
 
+(defun make-introspection-xml (obj)
+  (let ((interfaces-methods (collect-methods-by-interface (list obj))))
+    (cxml:with-xml-output (cxml:make-string-sink)
+      (cxml:doctype "node"
+        "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+        "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd")
+      (cxml:with-element "node"
+        (loop for interface-name being the hash-keys of interfaces-methods
+          using (hash-value methods)
+          do (cxml:with-element "interface"
+               (cxml:attribute "name" interface-name)
+               (loop for m in methods
+                 do (method-xml-description m))))))))
+
 (defmacro define-dbus-object (name &body options)
   (let ((path nil))
     (dolist (option options)
@@ -85,6 +99,9 @@
         (setf path (cadr option))))
     `(prog1
        (register-dbus-object ',name ,path)
+       (define-dbus-method (,name introspect) () (:string)
+         (:interface "org.freedesktop.DBus.Introspectable")
+         (make-introspection-xml ',name ))
        (define-dbus-method (,name get) ((interface :string) (property :string)) (:variant)
          (:interface "org.freedesktop.DBus.Properties")
          (let* ((obj (find-dbus-object ',name))
@@ -381,22 +398,3 @@ sans dashes."
       (loop for type in (handler-output-signature m)
             do (one-arg nil "out" type)))))
 
-
-(define-dbus-object default-introspect
-  (:path "/"))
-
-(define-dbus-method (default-introspect introspect) () (:string)
-  (:interface "org.freedesktop.DBus.Introspectable")
-  (let ((interfaces-methods (collect-methods-by-interface
-                              *all-dbus-objects*)))
-    (cxml:with-xml-output (cxml:make-string-sink)
-      (cxml:doctype "node" 
-                    "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
-                    "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd")
-      (cxml:with-element "node"
-        (loop for interface-name being the hash-keys of interfaces-methods
-              using (hash-value methods)
-              do (cxml:with-element "interface"
-                   (cxml:attribute "name" interface-name)
-                   (loop for m in methods
-                         do (method-xml-description m))))))))
